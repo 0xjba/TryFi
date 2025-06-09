@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TryFi Wallet Demo - Professional Web3 Wallet</title>
+    <style>
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1b23 0%, #2d2e3f 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        /* Demo Page Styles */
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .hero {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .demo-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .demo-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .demo-card h3 {
+            color: #1f2937;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .demo-card p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .demo-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .demo-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .wallet-status {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .status-connected {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .status-error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .notice {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+            color: #1e40af;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="hero">
+            <h1>TryFi Wallet</h1>
+            <p>Professional disposable Web3 wallet for safely testing dApps without risking your main wallet. Enterprise-grade security with zero commitment.</p>
+        </div>
+        
+        <div class="demo-section">
+            <h2 style="margin-bottom: 30px; color: #1f2937;">Try TryFi Now</h2>
+            
+            <div class="notice">
+                <strong>How to use:</strong> Look for the wallet device in the bottom-right corner. Click it to open your disposable wallet and start testing.
+            </div>
+            
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <h3>Connect Wallet</h3>
+                    <p>Test wallet connection functionality with your disposable TryFi wallet.</p>
+                    <button class="demo-btn" onclick="connectWallet()" id="connect-btn">
+                        Connect Wallet
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Send Transaction</h3>
+                    <p>Try sending a test transaction (to zero address for safety).</p>
+                    <button class="demo-btn" onclick="sendTransaction()" id="send-btn" disabled>
+                        Send Test TX
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Sign Message</h3>
+                    <p>Test message signing functionality with your wallet.</p>
+                    <button class="demo-btn" onclick="signMessage()" id="sign-btn" disabled>
+                        Sign Message
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Sign Typed Data</h3>
+                    <p>Test EIP-712 typed data signing functionality.</p>
+                    <button class="demo-btn" onclick="signTypedData()" id="sign-typed-btn" disabled>
+                        Sign Typed Data
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Test Approval</h3>
+                    <p>Test token approval transaction flow.</p>
+                    <button class="demo-btn" onclick="requestApproval()" id="approval-btn" disabled>
+                        Test Approval
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Sign Raw Data</h3>
+                    <p>Test eth_sign method for raw data signing.</p>
+                    <button class="demo-btn" onclick="signRawData()" id="sign-raw-btn" disabled>
+                        Sign Raw Data
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Theme: Neo Skeumorphic</h3>
+                    <p>Switch to the clean, Teenage Engineering-inspired neo-skeumorphic theme.</p>
+                    <button class="demo-btn" onclick="switchTheme('neo')">
+                        Switch to Neo Theme
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Theme: Default Dark</h3>
+                    <p>Switch back to the original dark futuristic theme.</p>
+                    <button class="demo-btn" onclick="switchTheme('default')">
+                        Switch to Dark Theme
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Show Wallet</h3>
+                    <p>Manually open the TryFi wallet interface (useful in hidden mode).</p>
+                    <button class="demo-btn" onclick="TryFi.show()">
+                        Show Wallet
+                    </button>
+                </div>
+            </div>
+            
+            <div class="wallet-status" id="wallet-info" style="display: none;">
+                <h4 style="margin-bottom: 10px;">Wallet Connected</h4>
+                <p><strong>Address:</strong> <span id="wallet-address">-</span></p>
+                <p><strong>Balance:</strong> <span id="wallet-balance">-</span> ETH</p>
+                <p><strong>Network:</strong> Sepolia Testnet</p>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2 style="margin-bottom: 20px; color: #1f2937;">Why TryFi?</h2>
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <h3>Safe Testing Environment</h3>
+                    <p>Never risk your main wallet when testing new dApps. TryFi creates disposable wallets that can be deleted after use.</p>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Instant Setup</h3>
+                    <p>No extensions, no downloads. Get a working wallet in seconds, directly in your browser.</p>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Full Web3 Compatibility</h3>
+                    <p>Works with any dApp that supports standard Web3 providers. Drop-in replacement for MetaMask.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>TryFi - Making Web3 testing safer, one disposable wallet at a time.</p>
+        </div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.14.3/dist/ethers.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    
+    <!-- Load TryFi Wallet Package -->
+    <script src="./dist/tryfi.umd.js"></script>
+    
+    <script>
+        // Initialize TryFi Wallet
+        TryFi.init({
+            // Required configuration
+            network: 'sepolia',
+            rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
+            chainId: 11155111,
+            
+            // Optional configuration
+            theme: 'glassmorphism',
+            position: 'bottom-right', // bottom-right, top-left, top-right, bottom-left, hidden
+            faucetUrl: 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia' // Set to null to hide faucet button
+        });
+
+        // Demo Functions (same as before)
+        async function connectWallet() {
+            try {
+                if (!window.ethereum) {
+                    TryFi.show();
+                    return;
+                }
+                
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const balance = await window.ethereum.request({ 
+                    method: 'eth_getBalance', 
+                    params: [accounts[0], 'latest'] 
+                });
+                
+                document.getElementById('wallet-address').textContent = 
+                    accounts[0].slice(0, 6) + '...' + accounts[0].slice(-4);
+                document.getElementById('wallet-balance').textContent = 
+                    (parseInt(balance, 16) / 1e18).toFixed(4);
+                
+                updateDemoPageUI(true);
+                
+            } catch (error) {
+                const walletInfo = document.getElementById('wallet-info');
+                walletInfo.innerHTML = `<h4>Connection Failed</h4><p>${error.message}</p>`;
+                walletInfo.className = 'wallet-status status-error';
+                walletInfo.style.display = 'block';
+            }
+        }
+        
+        async function sendTransaction() {
+            try {
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        to: '0x0000000000000000000000000000000000000000',
+                        value: '0x2386f26fc10000'
+                    }]
+                });
+            } catch (error) {
+                console.error('Transaction error:', error);
+            }
+        }
+        
+        async function signMessage() {
+            try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
+                const signature = await window.ethereum.request({
+                    method: 'personal_sign',
+                    params: ['Hello from TryFi! This is a test message for signature verification.', accounts[0]]
+                });
+            } catch (error) {
+                console.error('Signing error:', error);
+            }
+        }
+        
+        async function signTypedData() {
+            try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
+                const typedData = {
+                    domain: {
+                        name: 'TryFi Test dApp',
+                        version: '1',
+                        chainId: 11155111,
+                        verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC'
+                    },
+                    primaryType: 'TestMessage',
+                    types: {
+                        TestMessage: [
+                            { name: 'user', type: 'address' },
+                            { name: 'action', type: 'string' },
+                            { name: 'timestamp', type: 'uint256' }
+                        ]
+                    },
+                    message: {
+                        user: accounts[0],
+                        action: 'Testing TryFi wallet with structured data',
+                        timestamp: Math.floor(Date.now() / 1000)
+                    }
+                };
+                const signature = await window.ethereum.request({
+                    method: 'eth_signTypedData_v4',
+                    params: [accounts[0], JSON.stringify(typedData)]
+                });
+            } catch (error) {
+                console.error('Typed data signing error:', error);
+            }
+        }
+        
+        async function requestApproval() {
+            try {
+                const spenderAddress = '0x1234567890123456789012345678901234567890';
+                const amount = ethers.parseUnits('100', 18);
+                
+                const data = '0x095ea7b3' +
+                           spenderAddress.slice(2).padStart(64, '0') +
+                           amount.toString(16).padStart(64, '0');
+                           
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        to: '0xa0b86a33e6415efbd06b8b9a8b72c5fb0b95e0bc',
+                        data: data,
+                        gas: '0x5208'
+                    }]
+                });
+            } catch (error) {
+                console.error('Approval error:', error);
+            }
+        }
+        
+        async function signRawData() {
+            try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
+                
+                // Convert string to hex for raw data signing
+                const message = 'TryFi raw data signing test - this is raw data without Ethereum message prefix';
+                const rawData = '0x' + Array.from(new TextEncoder().encode(message))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+                
+                const signature = await window.ethereum.request({
+                    method: 'eth_sign',
+                    params: [accounts[0], rawData]
+                });
+                
+                console.log('Raw data signature:', signature);
+            } catch (error) {
+                console.error('Raw data signing error:', error);
+            }
+        }
+        
+        
+        function switchTheme(themeName) {
+            // Destroy current instance
+            if (window.tryfi) {
+                window.tryfi.destroy();
+            }
+            
+            // Reinitialize with new theme
+            TryFi.init({
+                network: 'sepolia',
+                position: 'hidden',
+                theme: themeName
+            });
+        }
+        
+        function updateDemoPageUI(connected) {
+            const walletInfo = document.getElementById('wallet-info');
+            const connectBtn = document.getElementById('connect-btn');
+            const sendBtn = document.getElementById('send-btn');
+            const signBtn = document.getElementById('sign-btn');
+            const signTypedBtn = document.getElementById('sign-typed-btn');
+            const approvalBtn = document.getElementById('approval-btn');
+            const signRawBtn = document.getElementById('sign-raw-btn');
+            
+            if (connected) {
+                if (walletInfo) {
+                    walletInfo.style.display = 'block';
+                    walletInfo.className = 'wallet-status status-connected';
+                }
+                if (connectBtn) {
+                    connectBtn.textContent = 'Connected ✓';
+                    connectBtn.disabled = true;
+                }
+                if (sendBtn) sendBtn.disabled = false;
+                if (signBtn) signBtn.disabled = false;
+                if (signTypedBtn) signTypedBtn.disabled = false;
+                if (approvalBtn) approvalBtn.disabled = false;
+                if (signRawBtn) signRawBtn.disabled = false;
+            } else {
+                if (walletInfo) {
+                    walletInfo.style.display = 'none';
+                    walletInfo.className = 'wallet-status';
+                }
+                if (connectBtn) {
+                    connectBtn.textContent = 'Connect Wallet';
+                    connectBtn.disabled = false;
+                }
+                if (sendBtn) sendBtn.disabled = true;
+                if (signBtn) signBtn.disabled = true;
+                if (signTypedBtn) signTypedBtn.disabled = true;
+                if (approvalBtn) approvalBtn.disabled = true;
+                if (signRawBtn) signRawBtn.disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>
