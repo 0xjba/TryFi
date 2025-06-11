@@ -476,7 +476,7 @@ export const glassmorphismTheme = `
 }
 
 .tryfi-main-balance {
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 700;
     color: #e2e8f0;
     margin-bottom: 4px;

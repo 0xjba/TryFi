@@ -3,7 +3,7 @@ import { themes } from './themes/index.js';
 class TryFiWallet {
     constructor(config) {
         // Validate required configuration
-        const requiredFields = ['network', 'rpcUrl', 'chainId'];
+        const requiredFields = ['chainName', 'rpcUrl', 'chainId'];
         for (const field of requiredFields) {
             if (!config[field]) {
                 throw new Error(`TryFi: Missing required configuration field: ${field}`);
@@ -13,6 +13,13 @@ class TryFiWallet {
         this.config = {
             position: 'bottom-right',
             theme: 'default',
+            nativeCurrency: {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                decimals: 18
+            },
+            blockExplorerUrls: ['https://etherscan.io'],
+            iconUrls: [],
             ...config
         };
         this.wallet = null;
@@ -82,6 +89,10 @@ class TryFiWallet {
             
             <div class="tryfi-modal" id="tryfi-modal">
                 <div class="tryfi-hardware-container">
+                    <div class="screw top-left"></div>
+                    <div class="screw top-right"></div>
+                    <div class="screw bottom-left"></div>
+                    <div class="screw bottom-right"></div>
                     <div class="tryfi-main-screen">
                         <div class="tryfi-screen-content">
                             <div class="tryfi-screen-header">
@@ -251,13 +262,12 @@ class TryFiWallet {
             <div style="text-align: center;">
                 <div class="tryfi-network-badge">
                     <div class="tryfi-network-dot"></div>
-                    Sepolia Testnet
+                    ${this.config.chainName}
                 </div>
             </div>
             
             <div class="tryfi-balance-display">
                 <div class="tryfi-main-balance">Loading...</div>
-                <div class="tryfi-balance-usd">$0.00 USD</div>
             </div>
             
             <div class="tryfi-address-display" onclick="this.querySelector('.address-text').select()" title="Click to select address">
@@ -327,12 +337,11 @@ class TryFiWallet {
                     </svg>
                 </div>
                 <div class="tryfi-asset-info">
-                    <div class="tryfi-asset-name">Ethereum</div>
-                    <div class="tryfi-asset-symbol">ETH</div>
+                    <div class="tryfi-asset-name">${this.config.nativeCurrency.name}</div>
+                    <div class="tryfi-asset-symbol">${this.config.nativeCurrency.symbol}</div>
                 </div>
                 <div class="tryfi-asset-balance">
                     <div class="tryfi-asset-amount" id="eth-balance">Loading...</div>
-                    <div class="tryfi-asset-value">$0.00</div>
                 </div>
             </div>
         `;
@@ -436,11 +445,11 @@ class TryFiWallet {
                     subtitle = `Spender: ${tx.spender ? tx.spender.slice(0, 6) + '...' + tx.spender.slice(-4) : 'Unknown'}`;
                     break;
                 case 'receive':
-                    title = 'Received ETH';
+                    title = `Received ${this.config.nativeCurrency.symbol}`;
                     subtitle = `From ${tx.from ? tx.from.slice(0, 6) + '...' + tx.from.slice(-4) : 'Unknown'}`;
                     break;
                 default:
-                    title = 'Sent ETH';
+                    title = `Sent ${this.config.nativeCurrency.symbol}`;
                     subtitle = `To ${tx.to ? tx.to.slice(0, 6) + '...' + tx.to.slice(-4) : 'Unknown'}`;
             }
             
@@ -450,8 +459,8 @@ class TryFiWallet {
                 title: title,
                 subtitle: subtitle,
                 amount: tx.type === 'approval' 
-                    ? `${parseFloat(tx.amount || '0').toFixed(2)} Tokens`
-                    : (tx.type === 'send' ? '-' : '+') + `${parseFloat(tx.amount || '0').toFixed(4)} ETH`,
+                    ? `${this.formatBalance(tx.amount || '0', this.config.nativeCurrency.decimals)} Tokens`
+                    : (tx.type === 'send' ? '-' : '+') + `${this.formatBalance(tx.amount || '0', this.config.nativeCurrency.decimals)} ${this.config.nativeCurrency.symbol}`,
                 status: tx.status || 'confirmed'
             };
         }).reverse();
@@ -461,7 +470,7 @@ class TryFiWallet {
         const content = document.getElementById('tryfi-content');
         content.innerHTML = `
             <div style="text-align: center;">
-                <h4 style="margin: 0 0 20px 0; color: #e2e8f0; font-size: 16px; font-weight: 600;">Receive ETH</h4>
+                <h4 style="margin: 0 0 20px 0; color: #e2e8f0; font-size: 16px; font-weight: 600;">Receive ${this.config.nativeCurrency.symbol}</h4>
                 
                 <div style="margin: 20px 0; padding: 20px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; border: 2px dashed rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; align-items: center;">
                     <canvas id="qr-canvas" style="margin-bottom: 12px;"></canvas>
@@ -494,7 +503,7 @@ class TryFiWallet {
                                 <path d="M7 3L12 8L17 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 <path d="M12 8V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            Get Test ETH
+                            Get Test ${this.config.nativeCurrency.symbol}
                         </a>
                     ` : ''}
                 </div>
@@ -515,20 +524,27 @@ class TryFiWallet {
     }
     
     viewTransaction(hash) {
-        window.open(`https://sepolia.etherscan.io/tx/${hash}`, '_blank');
+        const explorerUrl = this.config.blockExplorerUrls?.[0] || 'https://etherscan.io';
+        window.open(`${explorerUrl}/tx/${hash}`, '_blank');
     }
     
+    formatBalance(balance, decimals) {
+        const fixed = parseFloat(balance).toFixed(decimals);
+        return parseFloat(fixed).toString();
+    }
+
     async updateBalance() {
         const balance = await this.getBalance();
+        const formattedBalance = this.formatBalance(balance, this.config.nativeCurrency.decimals);
         
         const totalBalanceEl = document.querySelector('.tryfi-main-balance');
         if (totalBalanceEl) {
-            totalBalanceEl.textContent = `${parseFloat(balance).toFixed(4)} ETH`;
+            totalBalanceEl.textContent = `${formattedBalance} ${this.config.nativeCurrency.symbol}`;
         }
         
         const ethBalanceEl = document.getElementById('eth-balance');
         if (ethBalanceEl) {
-            ethBalanceEl.textContent = `${parseFloat(balance).toFixed(4)} ETH`;
+            ethBalanceEl.textContent = `${formattedBalance} ${this.config.nativeCurrency.symbol}`;
         }
     }
     
@@ -536,12 +552,12 @@ class TryFiWallet {
         const content = document.getElementById('tryfi-content');
         content.innerHTML = `
             <div>
-                <h4 style="margin: 0 0 20px 0; color: #e2e8f0; text-align: center; font-size: 16px; font-weight: 600;">Send ETH</h4>
+                <h4 style="margin: 0 0 20px 0; color: #e2e8f0; text-align: center; font-size: 16px; font-weight: 600;">Send ${this.config.nativeCurrency.symbol}</h4>
                 <div>
                     <label style="display: block; margin-bottom: 8px; color: #94a3b8; font-size: 12px; font-weight: 500;">To Address</label>
                     <input type="text" id="send-to" placeholder="0x..." style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3px; color: #e2e8f0; font-size: 12px; font-family: 'Monaco', 'Menlo', 'Consolas', monospace; margin-bottom: 16px;">
                     
-                    <label style="display: block; margin-bottom: 8px; color: #94a3b8; font-size: 12px; font-weight: 500;">Amount (ETH)</label>
+                    <label style="display: block; margin-bottom: 8px; color: #94a3b8; font-size: 12px; font-weight: 500;">Amount (${this.config.nativeCurrency.symbol})</label>
                     <input type="number" id="send-amount" placeholder="0.001" step="0.001" min="0" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3px; color: #e2e8f0; font-size: 12px; margin-bottom: 16px;">
                     
                     <div id="tryfi-tx-status"></div>
@@ -812,11 +828,11 @@ class TryFiWallet {
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                         <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Amount</span>
-                        <span style="color: #e2e8f0; font-size: 14px; font-weight: 600;">${ethers.formatEther(txParams.value || '0')} ETH</span>
+                        <span style="color: #e2e8f0; font-size: 14px; font-weight: 600;">${ethers.formatEther(txParams.value || '0')} ${this.config.nativeCurrency.symbol}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between;">
                         <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Network</span>
-                        <span style="color: #e2e8f0; font-size: 11px;">Sepolia</span>
+                        <span style="color: #e2e8f0; font-size: 11px;">${this.config.chainName}</span>
                     </div>
                 </div>
                 
@@ -852,10 +868,21 @@ class TryFiWallet {
         try {
             this.showTxStatus('Submitting transaction...', 'info');
             
+            // Use dApp-provided gas or estimate if not provided
+            let gasLimit = this._pendingTx.txParams.gas;
+            if (!gasLimit) {
+                gasLimit = await this.provider.estimateGas({
+                    to: this._pendingTx.txParams.to,
+                    value: this._pendingTx.txParams.value || 0,
+                    data: this._pendingTx.txParams.data
+                });
+            }
+
             const tx = await this.wallet.sendTransaction({
                 to: this._pendingTx.txParams.to,
                 value: this._pendingTx.txParams.value || 0,
-                gasLimit: this._pendingTx.txParams.gas || '21000'
+                gasLimit: gasLimit,
+                data: this._pendingTx.txParams.data
             });
             
             this.showTxStatus(`Transaction submitted: ${tx.hash.slice(0, 10)}...`, 'info');

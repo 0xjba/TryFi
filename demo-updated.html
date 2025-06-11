@@ -273,14 +273,21 @@
         // Initialize TryFi Wallet
         TryFi.init({
             // Required configuration
-            network: 'sepolia',
+            chainName: 'Sepolia Testnet',
             rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
             chainId: 11155111,
             
             // Optional configuration
-            theme: 'glassmorphism',
+            theme: 'default',
             position: 'bottom-right', // bottom-right, top-left, top-right, bottom-left, hidden
-            faucetUrl: 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia' // Set to null to hide faucet button
+            faucetUrl: 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia', // Set to null to hide faucet button
+            nativeCurrency: {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                decimals: 18
+            },
+            blockExplorerUrls: ['https://sepolia.etherscan.io'],
+            iconUrls: []
         });
 
         // Demo Functions (same as before)
@@ -384,8 +391,7 @@
                     method: 'eth_sendTransaction',
                     params: [{
                         to: '0xa0b86a33e6415efbd06b8b9a8b72c5fb0b95e0bc',
-                        data: data,
-                        gas: '0x5208'
+                        data: data
                     }]
                 });
             } catch (error) {
@@ -423,7 +429,7 @@
             
             // Reinitialize with new theme
             TryFi.init({
-                network: 'sepolia',
+                chainName: 'Sepolia Testnet',
                 position: 'hidden',
                 theme: themeName
             });

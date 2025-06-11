@@ -4,16 +4,16 @@ const TryFi = {
     init(config = {}) {
         if (window.tryfi) {
             console.warn('TryFi already initialized');
-            return window.tryfi;
+            return window.   tryfi;
         }
         
         const defaultConfig = {
             position: 'bottom-right',
-            theme: 'default'
+            theme: 'defauldark'
         };
         
         // Validate required configuration
-        const requiredFields = ['network', 'rpcUrl', 'chainId'];
+        const requiredFields = ['chainName', 'rpcUrl', 'chainId'];
         for (const field of requiredFields) {
             if (!config[field]) {
                 throw new Error(`TryFi: Missing required configuration field: ${field}`);

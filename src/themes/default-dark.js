@@ -1,4 +1,4 @@
-export const defaultTheme = `
+export const defaultdarkTheme = `
 /* Reset & Base Styles */
 * {
     margin: 0;
@@ -23,7 +23,7 @@ export const defaultTheme = `
 .tryfi-device {
     width: 52px;
     height: 52px;
-    background: linear-gradient(155deg, #EDEDED, #B6B6B6);
+    background: linear-gradient(145deg, #4a5568, #2d3748);
     border-radius: 6px;
     position: relative;
     cursor: pointer;
@@ -33,7 +33,7 @@ export const defaultTheme = `
         0 3px 10px rgba(0, 0, 0, 0.3),
         inset 0 2px 3px rgba(255, 255, 255, 0.15),
         inset 0 -2px 3px rgba(0, 0, 0, 0.3);
-    border: 1px solid #1a202c52;
+    border: 1px solid #1a202c;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,7 +46,7 @@ export const defaultTheme = `
     left: 2px;
     right: 2px;
     bottom: 2px;
-    background: linear-gradient(155deg, #c1c1c1, #96949F);
+    background: linear-gradient(145deg, #374151, #1f2937);
     border-radius: 4px;
     box-shadow: 
         inset 0 2px 3px rgba(0, 0, 0, 0.3),
@@ -60,11 +60,11 @@ export const defaultTheme = `
         0 5px 13px rgba(0, 0, 0, 0.4),
         inset 0 2px 3px rgba(255, 255, 255, 0.2),
         inset 0 -2px 3px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(155deg, #EDEDED, #B6B6B6);
+    background: linear-gradient(145deg, #4a5568, #374151);
 }
 
 .tryfi-device:hover::before {
-    background: linear-gradient(155deg, #c1c1c1, #96949F);
+    background: linear-gradient(145deg, #4a5568, #2d3748);
 }
 
 .tryfi-device:active {
@@ -83,7 +83,7 @@ export const defaultTheme = `
     transform: translate(-50%, -50%);
     width: 36px;
     height: 36px;
-    background: radial-gradient(circle, #353535, #171717);
+    background: linear-gradient(145deg, #0a0e1a, #0f172a);
     border-radius: 3px;
     border: 1px solid #000;
     box-shadow: 
@@ -258,7 +258,7 @@ export const defaultTheme = `
 .tryfi-hardware-container {
     width: 420px;
     height: 500px;
-    background: linear-gradient(155deg, #EDEDED, #B6B6B6);
+    background: linear-gradient(145deg, #4a5568, #2d3748);
     border-radius: 6px;
     position: relative;
     box-shadow: 
@@ -266,7 +266,19 @@ export const defaultTheme = `
         0 8px 24px rgba(0, 0, 0, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-    border: 1px solid #1a202c52;
+    border: 1px solid #1a202c;
+}
+
+.tryfi-hardware-container::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    background: linear-gradient(145deg, #374151, #1f2937);
+    border-radius: 3px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tryfi-hardware-container .screw {
@@ -319,18 +331,6 @@ export const defaultTheme = `
     right: 5px;
 }
 
-.tryfi-hardware-container::before {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    right: 3px;
-    bottom: 3px;
-    background: linear-gradient(155deg, #c1c1c1, #96949F);
-    border-radius: 3px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
 .tryfi-main-screen {
     position: absolute;
     top: 12px;
@@ -339,7 +339,7 @@ export const defaultTheme = `
     bottom: 12px;
     background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
     border-radius: 3px;
-    border: 3px solid #000000;
+    border: 3px solid #0f172a;
     box-shadow: 
         inset 0 4px 12px rgba(0, 0, 0, 0.7),
         inset 0 -2px 4px rgba(255, 255, 255, 0.05);
@@ -379,7 +379,7 @@ export const defaultTheme = `
     padding: 10px;
     height: 100%;
     overflow-y: auto;
-    background: radial-gradient(circle, #353535, #171717);
+    background: linear-gradient(180deg, #0a0e1a 0%, #0f172a 50%, #1e293b 100%);
     color: #e2e8f0;
     position: relative;
     scrollbar-width: none;
@@ -473,7 +473,7 @@ export const defaultTheme = `
 }
 
 .tryfi-main-balance {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 700;
     color: #e2e8f0;
     margin-bottom: 4px;
