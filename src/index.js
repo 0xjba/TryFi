@@ -13,11 +13,21 @@ const TryFi = {
         };
         
         // Validate required configuration
-        const requiredFields = ['chainName', 'rpcUrl', 'chainId'];
+        const requiredFields = ['chainName', 'rpcUrl', 'chainId', 'nativeCurrency', 'blockExplorerUrls'];
         for (const field of requiredFields) {
             if (!config[field]) {
                 throw new Error(`TryFi: Missing required configuration field: ${field}`);
             }
+        }
+        
+        // Validate nativeCurrency structure
+        if (!config.nativeCurrency.name || !config.nativeCurrency.symbol || typeof config.nativeCurrency.decimals !== 'number') {
+            throw new Error('TryFi: nativeCurrency must have name, symbol, and decimals properties');
+        }
+        
+        // Validate blockExplorerUrls is an array
+        if (!Array.isArray(config.blockExplorerUrls) || config.blockExplorerUrls.length === 0) {
+            throw new Error('TryFi: blockExplorerUrls must be a non-empty array');
         }
         
         const finalConfig = { ...defaultConfig, ...config };

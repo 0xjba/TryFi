@@ -1,27 +1,62 @@
 {
   "name": "tryfi",
   "version": "1.0.0",
-  "description": "Preview dApps using disposable wallets with one click",
+  "description": "Try dApps safely with a one-click disposable wallet before you connect your main wallet",
   "main": "dist/tryfi.umd.js",
   "module": "dist/tryfi.esm.js",
+  "unpkg": "dist/tryfi.umd.js",
+  "jsdelivr": "dist/tryfi.umd.js",
+  "types": "dist/tryfi.d.ts",
   "files": [
-    "dist/"
+    "dist/",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "rollup -c",
-    "dev": "rollup -c -w"
+    "build:dev": "rollup -c --environment NODE_ENV:development",
+    "build:prod": "rollup -c --environment NODE_ENV:production",
+    "dev": "rollup -c -w",
+    "prepublishOnly": "npm run build:prod",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "peerDependencies": {
-    "ethers": "^6.14.3",
-    "qrious": "^4.0.2"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0xjba/TryFi.git"
+  },
+  "homepage": "https://github.com/0xjba/TryFi#readme",
+  "bugs": {
+    "url": "https://github.com/0xjba/TryFi.git/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
   },
   "devDependencies": {
+    "ethers": "^6.14.3",
+    "qrious": "^4.0.2",
     "rollup": "^4.0.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
     "@rollup/plugin-commonjs": "^25.0.0",
-    "@rollup/plugin-terser": "^0.4.0"
+    "@rollup/plugin-terser": "^0.4.0",
+    "@rollup/plugin-alias": "^5.0.0",
+    "@rollup/plugin-replace": "^5.0.0"
   },
-  "keywords": ["web3", "wallet", "ethereum", "dapp", "testing"],
+  "keywords": [
+    "web3", 
+    "wallet", 
+    "ethereum", 
+    "dapp", 
+    "testing", 
+    "disposable-wallet",
+    "blockchain",
+    "crypto",
+    "defi"
+  ],
   "author": "TryFi",
-  "license": "MIT"
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  }
 }

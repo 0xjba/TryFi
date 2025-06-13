@@ -1,24 +1,34 @@
 import { themes } from './themes/index.js';
+import { TryFiEthers } from './utils/ethers.js';
+import { TryFiQRious } from './utils/qrious.js';
+
+// Use our namespaced libraries to avoid conflicts
+const ethers = TryFiEthers;
+const QRious = TryFiQRious;
 
 class TryFiWallet {
     constructor(config) {
         // Validate required configuration
-        const requiredFields = ['chainName', 'rpcUrl', 'chainId'];
+        const requiredFields = ['chainName', 'rpcUrl', 'chainId', 'nativeCurrency', 'blockExplorerUrls'];
         for (const field of requiredFields) {
             if (!config[field]) {
                 throw new Error(`TryFi: Missing required configuration field: ${field}`);
             }
         }
         
+        // Validate nativeCurrency structure
+        if (!config.nativeCurrency.name || !config.nativeCurrency.symbol || typeof config.nativeCurrency.decimals !== 'number') {
+            throw new Error('TryFi: nativeCurrency must have name, symbol, and decimals properties');
+        }
+        
+        // Validate blockExplorerUrls is an array
+        if (!Array.isArray(config.blockExplorerUrls) || config.blockExplorerUrls.length === 0) {
+            throw new Error('TryFi: blockExplorerUrls must be a non-empty array');
+        }
+        
         this.config = {
             position: 'bottom-right',
             theme: 'default',
-            nativeCurrency: {
-                name: 'Ethereum',
-                symbol: 'ETH',
-                decimals: 18
-            },
-            blockExplorerUrls: ['https://etherscan.io'],
             iconUrls: [],
             ...config
         };
@@ -459,7 +469,7 @@ class TryFiWallet {
                 title: title,
                 subtitle: subtitle,
                 amount: tx.type === 'approval' 
-                    ? `${this.formatBalance(tx.amount || '0', this.config.nativeCurrency.decimals)} Tokens`
+                    ? `${tx.amount || '0'} ${tx.tokenSymbol || 'Tokens'}`
                     : (tx.type === 'send' ? '-' : '+') + `${this.formatBalance(tx.amount || '0', this.config.nativeCurrency.decimals)} ${this.config.nativeCurrency.symbol}`,
                 status: tx.status || 'confirmed'
             };
@@ -511,7 +521,7 @@ class TryFiWallet {
         `;
         
         const canvas = document.getElementById('qr-canvas');
-        if (canvas && typeof QRious !== 'undefined') {
+        if (canvas) {
             new QRious({
                 element: canvas,
                 value: this.wallet.address,
@@ -529,7 +539,25 @@ class TryFiWallet {
     }
     
     formatBalance(balance, decimals) {
-        const fixed = parseFloat(balance).toFixed(decimals);
+        // Handle very small numbers that might convert to scientific notation
+        const num = parseFloat(balance);
+        
+        // If the number is very small (less than 0.000001), use fixed-point notation
+        if (num > 0 && num < 0.000001) {
+            // For very small numbers, show full precision up to 18 decimals
+            const fixed = num.toFixed(18);
+            // Remove trailing zeros but keep significant digits
+            const trimmed = fixed.replace(/\.?0+$/, '');
+            // Ensure we show at least 8 decimal places for very small numbers
+            const decimalPart = trimmed.split('.')[1] || '';
+            if (decimalPart.length < 8) {
+                return num.toFixed(8);
+            }
+            return trimmed;
+        }
+        
+        // For normal numbers, use the original logic
+        const fixed = num.toFixed(decimals);
         return parseFloat(fixed).toString();
     }
 
@@ -583,12 +611,31 @@ class TryFiWallet {
         `;
     }
     
+    // Simple address validation helper
+    isValidAddress(address) {
+        // Basic Ethereum address validation: starts with 0x and is 42 characters long
+        return /^0x[a-fA-F0-9]{40}$/.test(address);
+    }
+
     async sendETH() {
         const to = document.getElementById('send-to').value.trim();
         const amount = document.getElementById('send-amount').value.trim();
         
+        // Check if fields are empty
         if (!to || !amount) {
-            this.showStatus('Please fill all fields', 'error');
+            this.showTxStatus('Please fill all fields', 'error');
+            return;
+        }
+        
+        // Validate address format
+        if (!this.isValidAddress(to)) {
+            this.showTxStatus('Invalid address format. Please enter a valid Ethereum address (0x...)', 'error');
+            return;
+        }
+        
+        // Validate amount (additional check even though input type is number)
+        if (isNaN(amount) || parseFloat(amount) <= 0) {
+            this.showTxStatus('Please enter a valid amount greater than 0', 'error');
             return;
         }
         
@@ -597,10 +644,10 @@ class TryFiWallet {
                 to: to,
                 value: ethers.parseEther(amount)
             });
-            this.showStatus(`Transaction sent: ${tx.slice(0, 10)}...`, 'success');
+            this.showTxStatus(`Transaction sent: ${tx.slice(0, 10)}...`, 'success');
             setTimeout(() => this.updateContent(), 2000);
         } catch (error) {
-            this.showStatus(`Transaction failed: ${error.message}`, 'error');
+            this.showTxStatus(`Transaction failed: ${error.message}`, 'error');
         }
     }
     
@@ -797,11 +844,25 @@ class TryFiWallet {
     async handleSendTransaction(txParams) {
         if (!this.wallet) throw new Error('No wallet');
         
+        // Validate required parameters like MetaMask
+        if (!txParams.from) {
+            throw new Error('Invalid parameters: must provide an Ethereum address.');
+        }
+        
+        // Validate that the from address matches our wallet
+        if (txParams.from.toLowerCase() !== this.wallet.address.toLowerCase()) {
+            throw new Error('Invalid from address: must match connected account.');
+        }
+        
         try {
             this.showWidget();
             
             const content = document.getElementById('tryfi-content');
-            content.innerHTML = this.renderTransactionConfirmation(txParams);
+            content.innerHTML = 'Loading transaction details...';
+            
+            // Render transaction confirmation asynchronously
+            const confirmationHTML = await this.renderTransactionConfirmation(txParams);
+            content.innerHTML = confirmationHTML;
             
             return new Promise((resolve, reject) => {
                 this._pendingTx = { resolve, reject, txParams };
@@ -812,29 +873,95 @@ class TryFiWallet {
         }
     }
     
-    renderTransactionConfirmation(txParams) {
+    async renderTransactionConfirmation(txParams) {
+        // Detect transaction types
+        const isApproval = txParams.data && txParams.data.startsWith('0x095ea7b3');
+        const isTransfer = txParams.data && txParams.data.startsWith('0xa9059cbb');
+        
+        let approvalSpender = null;
+        let approvalAmount = null;
+        let tokenSymbol = null;
+        let hasInsufficientBalance = false;
+        let transferAmount = null;
+        let transferRecipient = null;
+        
+        if (isApproval) {
+            // Extract spender address from approval data (bytes 4-35)
+            approvalSpender = '0x' + txParams.data.slice(34, 74);
+            // Extract amount from approval data (bytes 36-67)
+            const amountHex = txParams.data.slice(74, 138);
+            
+            // Fetch token information
+            const tokenInfo = await this.getTokenInfo(txParams.to);
+            tokenSymbol = tokenInfo.symbol;
+            approvalAmount = this.formatApprovalAmount(amountHex, tokenInfo.decimals);
+        } else if (isTransfer) {
+            // Extract recipient address from transfer data (bytes 4-35)
+            transferRecipient = '0x' + txParams.data.slice(34, 74);
+            const amountHex = txParams.data.slice(74, 138);
+            
+            const tokenInfo = await this.getTokenInfo(txParams.to);
+            tokenSymbol = tokenInfo.symbol;
+            
+            // Get user's token balance
+            const erc20Abi = ['function balanceOf(address) view returns (uint256)'];
+            const contract = new ethers.Contract(txParams.to, erc20Abi, this.provider);
+            
+            try {
+                const userBalance = await this.callWithTimeout(contract.balanceOf(this.wallet.address), 3000, BigInt(0));
+                const transferAmountBigInt = BigInt('0x' + amountHex);
+                
+                transferAmount = this.formatApprovalAmount(amountHex, tokenInfo.decimals);
+                hasInsufficientBalance = transferAmountBigInt > userBalance;
+            } catch (error) {
+                console.warn('Failed to check token balance:', error);
+                transferAmount = 'Unknown';
+            }
+        }
+        
         return `
             <div>
-                <h4 style="margin: 0 0 20px 0; color: #e2e8f0; text-align: center; font-size: 16px; font-weight: 600;">Confirm Transaction</h4>
+                <h4 style="margin: 0 0 20px 0; color: #e2e8f0; text-align: center; font-size: 16px; font-weight: 600;">${isApproval ? 'Confirm Token Approval' : 'Confirm Transaction'}</h4>
                 
                 <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; padding: 16px; margin-bottom: 16px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                         <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">From</span>
                         <span style="color: #e2e8f0; font-size: 11px; font-family: monospace;">${this.wallet.address.slice(0, 6)}...${this.wallet.address.slice(-4)}</span>
                     </div>
+                    ${isApproval ? `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">To</span>
+                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Token Contract</span>
                         <span style="color: #e2e8f0; font-size: 11px; font-family: monospace;">${txParams.to.slice(0, 6)}...${txParams.to.slice(-4)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Amount</span>
-                        <span style="color: #e2e8f0; font-size: 14px; font-weight: 600;">${ethers.formatEther(txParams.value || '0')} ${this.config.nativeCurrency.symbol}</span>
+                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Spender</span>
+                        <span style="color: #e2e8f0; font-size: 11px; font-family: monospace;">${approvalSpender.slice(0, 6)}...${approvalSpender.slice(-4)}</span>
                     </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Approval Amount</span>
+                        <span style="color: #e2e8f0; font-size: 11px; font-family: monospace;">${approvalAmount} ${tokenSymbol}</span>
+                    </div>
+                    ` : `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">To</span>
+                        <span style="color: #e2e8f0; font-size: 11px; font-family: monospace;">${isTransfer ? `${transferRecipient.slice(0, 6)}...${transferRecipient.slice(-4)}` : `${txParams.to.slice(0, 6)}...${txParams.to.slice(-4)}`}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Amount</span>
+                        <span style="color: #e2e8f0; font-size: 14px; font-weight: 600;">${isTransfer ? `${transferAmount} ${tokenSymbol}` : `${ethers.formatEther(txParams.value || '0')} ${this.config.nativeCurrency.symbol}`}</span>
+                    </div>
+                    `}
                     <div style="display: flex; justify-content: space-between;">
                         <span style="color: #64748b; font-size: 11px; text-transform: uppercase;">Network</span>
                         <span style="color: #e2e8f0; font-size: 11px;">${this.config.chainName}</span>
                     </div>
                 </div>
+                
+                ${hasInsufficientBalance ? `
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 12px; margin-bottom: 16px; color: #f87171; font-size: 12px; text-align: center;">
+                    ⚠️ Insufficient ${tokenSymbol} balance
+                </div>
+                ` : ''}
                 
                 <div id="tryfi-tx-status"></div>
                 
@@ -846,7 +973,7 @@ class TryFiWallet {
                         </svg>
                         Reject
                     </button>
-                    <button class="tryfi-action-btn primary" onclick="window.tryfi.confirmTx()">
+                    <button class="tryfi-action-btn primary" ${hasInsufficientBalance ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''} onclick="window.tryfi.confirmTx()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -859,6 +986,12 @@ class TryFiWallet {
     
     async confirmTx() {
         if (!this._pendingTx) return;
+        
+        // Check if confirm button is disabled (insufficient balance)
+        const confirmBtn = document.querySelector('.tryfi-action-btn.primary');
+        if (confirmBtn && confirmBtn.disabled) {
+            return;
+        }
         
         const buttonArea = document.querySelector('.tryfi-action-grid');
         if (buttonArea) {
@@ -887,11 +1020,33 @@ class TryFiWallet {
             
             this.showTxStatus(`Transaction submitted: ${tx.hash.slice(0, 10)}...`, 'info');
             
+            // Determine transaction type based on data
+            let txType = 'send';
+            let txAmount = ethers.formatEther(this._pendingTx.txParams.value || '0');
+            let spender = null;
+            let tokenSymbol = null;
+            
+            // Check if this is an ERC-20 approval transaction
+            if (this._pendingTx.txParams.data && this._pendingTx.txParams.data.startsWith('0x095ea7b3')) {
+                txType = 'approval';
+                // Extract spender address from approval data (bytes 4-35)
+                spender = '0x' + this._pendingTx.txParams.data.slice(34, 74);
+                // Extract amount from approval data (bytes 36-67)
+                const amountHex = this._pendingTx.txParams.data.slice(74, 138);
+                
+                // Get token info for proper formatting
+                const tokenInfo = await this.getTokenInfo(this._pendingTx.txParams.to);
+                tokenSymbol = tokenInfo.symbol;
+                txAmount = this.formatApprovalAmount(amountHex, tokenInfo.decimals);
+            }
+            
             const txRecord = {
                 hash: tx.hash,
-                type: 'send',
+                type: txType,
                 to: this._pendingTx.txParams.to,
-                amount: ethers.formatEther(this._pendingTx.txParams.value || '0'),
+                amount: txAmount,
+                spender: spender,
+                tokenSymbol: tokenSymbol,
                 status: 'pending',
                 timestamp: Date.now()
             };
@@ -1233,6 +1388,98 @@ class TryFiWallet {
         // Clear references
         window.tryfi = null;
         window.TryFi = null;
+    }
+    
+    // Add token information fetching methods
+    async getTokenInfo(tokenAddress) {
+        try {
+            // Check if we have cached token info
+            const cacheKey = `token-${tokenAddress}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const tokenInfo = JSON.parse(cached);
+                // Use cache if it's less than 1 hour old
+                if (Date.now() - tokenInfo.timestamp < 3600000) {
+                    return tokenInfo;
+                }
+            }
+
+            // ERC-20 ABI for symbol() and name() functions
+            const erc20Abi = [
+                'function symbol() view returns (string)',
+                'function name() view returns (string)',
+                'function decimals() view returns (uint8)'
+            ];
+            
+            const contract = new ethers.Contract(tokenAddress, erc20Abi, this.provider);
+            
+            // Fetch token info with timeout
+            const [symbol, name, decimals] = await Promise.all([
+                this.callWithTimeout(contract.symbol(), 3000, 'Unknown'),
+                this.callWithTimeout(contract.name(), 3000, 'Unknown Token'),
+                this.callWithTimeout(contract.decimals(), 3000, 18)
+            ]);
+            
+            const tokenInfo = {
+                symbol,
+                name,
+                decimals,
+                timestamp: Date.now()
+            };
+            
+            // Cache the result
+            localStorage.setItem(cacheKey, JSON.stringify(tokenInfo));
+            
+            return tokenInfo;
+        } catch (error) {
+            console.warn('Failed to fetch token info:', error);
+            return {
+                symbol: 'UNKNOWN',
+                name: 'Unknown Token',
+                decimals: 18
+            };
+        }
+    }
+    
+    async callWithTimeout(promise, timeout, fallback) {
+        try {
+            return await Promise.race([
+                promise,
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), timeout)
+                )
+            ]);
+        } catch (error) {
+            return fallback;
+        }
+    }
+    
+    // Helper to format approval amount with proper decimals
+    formatApprovalAmount(amountHex, decimals) {
+        try {
+            const amountBigInt = BigInt('0x' + amountHex);
+            
+            // Check for max approval (common pattern)
+            const maxUint256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+            if (amountBigInt === maxUint256) {
+                return 'Unlimited';
+            }
+            
+            // Format with token decimals
+            const divisor = BigInt(10) ** BigInt(decimals);
+            const wholePart = amountBigInt / divisor;
+            const fractionalPart = amountBigInt % divisor;
+            
+            if (fractionalPart === BigInt(0)) {
+                return wholePart.toString();
+            } else {
+                const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+                const trimmedFractional = fractionalStr.replace(/0+$/, '');
+                return `${wholePart}.${trimmedFractional}`;
+            }
+        } catch (e) {
+            return 'Unknown';
+        }
     }
 }
 

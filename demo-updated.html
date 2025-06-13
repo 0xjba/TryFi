@@ -155,6 +155,10 @@
                 <strong>How to use:</strong> Look for the wallet device in the bottom-right corner. Click it to open your disposable wallet and start testing.
             </div>
             
+            <div class="notice" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #065f46;">
+                <strong>🎉 New:</strong> Zero setup required! TryFi now bundles all dependencies internally - no need to install ethers or qrious separately. Just one script and you're ready to go!
+            </div>
+            
             <div class="demo-grid">
                 <div class="demo-card">
                     <h3>Connect Wallet</h3>
@@ -221,6 +225,22 @@
                 </div>
                 
                 <div class="demo-card">
+                    <h3>USDC Approval</h3>
+                    <p>Test USDC token approval for a dummy spender address.</p>
+                    <button class="demo-btn" onclick="requestUSDCApproval()" id="usdc-approval-btn" disabled>
+                        Approve USDC
+                    </button>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Send USDC</h3>
+                    <p>Test sending USDC tokens to a test address.</p>
+                    <button class="demo-btn" onclick="sendUSDC()" id="usdc-send-btn" disabled>
+                        Send USDC
+                    </button>
+                </div>
+                
+                <div class="demo-card">
                     <h3>Show Wallet</h3>
                     <p>Manually open the TryFi wallet interface (useful in hidden mode).</p>
                     <button class="demo-btn" onclick="TryFi.show()">
@@ -262,11 +282,8 @@
         </div>
     </div>
 
-    <!-- Load dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.14.3/dist/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    
-    <!-- Load TryFi Wallet Package -->
+    <!-- Load TryFi (no additional dependencies needed) -->
+    <!-- TryFi Wallet - Single script with all dependencies bundled! -->
     <script src="./dist/tryfi.umd.js"></script>
     
     <script>
@@ -277,16 +294,18 @@
             rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
             chainId: 11155111,
             
-            // Optional configuration
-            theme: 'default',
-            position: 'bottom-right', // bottom-right, top-left, top-right, bottom-left, hidden
-            faucetUrl: 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia', // Set to null to hide faucet button
+            // Required configuration
             nativeCurrency: {
                 name: 'Ethereum',
                 symbol: 'ETH',
                 decimals: 18
             },
             blockExplorerUrls: ['https://sepolia.etherscan.io'],
+            
+            // Optional configuration
+            theme: 'default',
+            position: 'bottom-right', // bottom-right, top-left, top-right, bottom-left, hidden
+            faucetUrl: 'https://cloud.google.com/application/web3/faucet/ethereum/sepolia', // Set to null to hide faucet button
             iconUrls: []
         });
 
@@ -321,9 +340,11 @@
         
         async function sendTransaction() {
             try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
                 const txHash = await window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [{
+                        from: accounts[0],
                         to: '0x0000000000000000000000000000000000000000',
                         value: '0x2386f26fc10000'
                     }]
@@ -380,8 +401,10 @@
         
         async function requestApproval() {
             try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
                 const spenderAddress = '0x1234567890123456789012345678901234567890';
-                const amount = ethers.parseUnits('100', 18);
+                // Manual calculation: 100 * 10^18 (since ethers.parseUnits is not available)
+                const amount = BigInt('100000000000000000000'); // 100 tokens with 18 decimals
                 
                 const data = '0x095ea7b3' +
                            spenderAddress.slice(2).padStart(64, '0') +
@@ -390,6 +413,7 @@
                 const txHash = await window.ethereum.request({
                     method: 'eth_sendTransaction',
                     params: [{
+                        from: accounts[0],
                         to: '0xa0b86a33e6415efbd06b8b9a8b72c5fb0b95e0bc',
                         data: data
                     }]
@@ -420,6 +444,62 @@
             }
         }
         
+        async function requestUSDCApproval() {
+            try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
+                const usdcContractAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+                const spenderAddress = '0x1234567890123456789012345678901234567890'; // Dummy spender
+                // 100 USDC (USDC has 6 decimals)
+                const amount = BigInt('100000000'); // 100 * 10^6
+                
+                // Create approval transaction data
+                const data = '0x095ea7b3' +
+                           spenderAddress.slice(2).padStart(64, '0') +
+                           amount.toString(16).padStart(64, '0');
+                           
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        from: accounts[0],
+                        to: usdcContractAddress,
+                        data: data
+                    }]
+                });
+                
+                console.log('USDC Approval transaction hash:', txHash);
+            } catch (error) {
+                console.error('USDC Approval error:', error);
+            }
+        }
+        
+        async function sendUSDC() {
+            try {
+                const accounts = await window.ethereum.request({method: 'eth_accounts'});
+                const usdcContractAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+                const recipientAddress = '0x0000000000000000000000000000000000000001'; // Test address
+                // 10 USDC (USDC has 6 decimals)
+                const amount = BigInt('10000000'); // 10 * 10^6
+                
+                // Create transfer transaction data
+                const data = '0xa9059cbb' +
+                           recipientAddress.slice(2).padStart(64, '0') +
+                           amount.toString(16).padStart(64, '0');
+                           
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        from: accounts[0],
+                        to: usdcContractAddress,
+                        data: data
+                    }]
+                });
+                
+                console.log('USDC Transfer transaction hash:', txHash);
+            } catch (error) {
+                console.error('USDC Transfer error:', error);
+            }
+        }
+        
         
         function switchTheme(themeName) {
             // Destroy current instance
@@ -430,6 +510,14 @@
             // Reinitialize with new theme
             TryFi.init({
                 chainName: 'Sepolia Testnet',
+                rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
+                chainId: 11155111,
+                nativeCurrency: {
+                    name: 'Ethereum',
+                    symbol: 'ETH',
+                    decimals: 18
+                },
+                blockExplorerUrls: ['https://sepolia.etherscan.io'],
                 position: 'hidden',
                 theme: themeName
             });
@@ -443,6 +531,8 @@
             const signTypedBtn = document.getElementById('sign-typed-btn');
             const approvalBtn = document.getElementById('approval-btn');
             const signRawBtn = document.getElementById('sign-raw-btn');
+            const usdcApprovalBtn = document.getElementById('usdc-approval-btn');
+            const usdcSendBtn = document.getElementById('usdc-send-btn');
             
             if (connected) {
                 if (walletInfo) {
@@ -458,6 +548,8 @@
                 if (signTypedBtn) signTypedBtn.disabled = false;
                 if (approvalBtn) approvalBtn.disabled = false;
                 if (signRawBtn) signRawBtn.disabled = false;
+                if (usdcApprovalBtn) usdcApprovalBtn.disabled = false;
+                if (usdcSendBtn) usdcSendBtn.disabled = false;
             } else {
                 if (walletInfo) {
                     walletInfo.style.display = 'none';
@@ -472,6 +564,8 @@
                 if (signTypedBtn) signTypedBtn.disabled = true;
                 if (approvalBtn) approvalBtn.disabled = true;
                 if (signRawBtn) signRawBtn.disabled = true;
+                if (usdcApprovalBtn) usdcApprovalBtn.disabled = true;
+                if (usdcSendBtn) usdcSendBtn.disabled = true;
             }
         }
     </script>
