@@ -844,9 +844,9 @@ class TryFiWallet {
     async handleSendTransaction(txParams) {
         if (!this.wallet) throw new Error('No wallet');
         
-        // Validate required parameters like MetaMask
+        // Auto-add from address if missing (many dApps don't provide it)
         if (!txParams.from) {
-            throw new Error('Invalid parameters: must provide an Ethereum address.');
+            txParams.from = this.wallet.address;
         }
         
         // Validate that the from address matches our wallet
